@@ -13,35 +13,81 @@ import sys
 from bankitalia_fpi import build_bankitalia_fpi_dataset
 from eurostat_rates import build_italian_long_term_yield_dataset
 from mef_treasury import build_mef_treasury_dataset
+from normalize_bankitalia import build_bankitalia_final_tables
+from normalize_mef import build_mef_final_tables
+from quality_checks import build_quality_report
 from config import PROCESSED_DIR
 from io_utils import make_folder, utc_now_string, write_json
 
 
 def run_pipeline_step(step_name, step_function):
-    """Run one source-specific pipeline and return a status dictionary."""
+    """Run one pipeline step and return a status dictionary."""
     try:
-        output_dir = step_function()
-        return {"step": step_name, "status": "ok", "output_dir": str(output_dir), "error": ""}
+        output = step_function()
+        return {
+            "step": step_name,
+            "status": "ok",
+            "output": str(output),
+            "error": "",
+        }
     except Exception as error:
-        return {"step": step_name, "status": "error", "output_dir": "", "error": str(error)}
+        return {
+            "step": step_name,
+            "status": "error",
+            "output": "",
+            "error": str(error),
+        }
 
 
-def build_all_datasets():
-    """Run Banca d'Italia, MEF/Treasury and Eurostat pipelines."""
+def build_source_datasets():
+    """Download and convert source-level datasets."""
     steps = [
         ("bankitalia_fpi", build_bankitalia_fpi_dataset),
         ("mef_treasury", build_mef_treasury_dataset),
         ("eurostat_rates", build_italian_long_term_yield_dataset),
     ]
-    results = [run_pipeline_step(name, function) for name, function in steps]
+    return [run_pipeline_step(name, function) for name, function in steps]
+
+
+def build_final_datasets():
+    """Build analytical final datasets from source-level CSV files."""
+    steps = [
+        ("normalize_bankitalia", build_bankitalia_final_tables),
+        ("normalize_mef", build_mef_final_tables),
+    ]
+    return [run_pipeline_step(name, function) for name, function in steps]
+
+
+def run_quality_checks():
+    """Build validation reports and return quality-check status."""
+    report, summary = build_quality_report()
+    return {
+        "step": "quality_checks",
+        "status": summary["status"],
+        "output": summary["report_csv"],
+        "error": "" if summary["status"] == "pass" else f"{summary['failed_critical_checks']} critical checks failed",
+        "checks": len(report),
+    }
+
+
+def build_all_datasets():
+    """Run source extraction, final normalization and quality checks."""
     make_folder(PROCESSED_DIR)
-    write_json({"generated_at_utc": utc_now_string(), "results": results}, PROCESSED_DIR / "pipeline_run_metadata.json")
+    results = []
+    results.extend(build_source_datasets())
+    results.extend(build_final_datasets())
+    results.append(run_quality_checks())
+
+    write_json({
+        "generated_at_utc": utc_now_string(),
+        "results": results,
+    }, PROCESSED_DIR / "pipeline_run_metadata.json")
     return results
 
 
 def has_errors(results):
     """Return True if at least one pipeline step failed."""
-    return any(result["status"] != "ok" for result in results)
+    return any(result["status"] not in ["ok", "pass"] for result in results)
 
 
 def print_results(results):
