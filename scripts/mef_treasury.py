@@ -140,6 +140,13 @@ def process_catalog_row(row, output_dir):
     return [], []
 
 
+def has_successful_downloads(catalog):
+    """Return True when the MEF discovery step downloaded at least one file."""
+    if catalog.empty or "status" not in catalog.columns:
+        return False
+    return len(catalog[catalog["status"] == "ok"]) > 0
+
+
 def build_mef_treasury_dataset():
     """Run discovery, download and conversion of Treasury tabular files."""
     output_dir = PROCESSED_DIR / "mef"
@@ -150,6 +157,9 @@ def build_mef_treasury_dataset():
     make_folder(output_dir / "files")
 
     catalog = build_mef_discovery_catalog()
+    if not has_successful_downloads(catalog):
+        raise RuntimeError("No MEF Treasury files were downloaded successfully.")
+
     wide_frames = []
     cell_frames = []
 
