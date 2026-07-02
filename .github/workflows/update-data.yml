@@ -8,6 +8,11 @@ on:
 
 permissions:
   contents: write
+  actions: read
+
+concurrency:
+  group: update-public-debt-data
+  cancel-in-progress: false
 
 jobs:
   update-data:
@@ -30,6 +35,17 @@ jobs:
       - name: Build datasets
         run: |
           python scripts/build_all_datasets.py
+
+      - name: Upload quality report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-debt-quality-report
+          path: |
+            data/processed/pipeline_run_metadata.json
+            data/processed/quality/validation_report.csv
+            data/processed/quality/validation_summary.json
+          if-no-files-found: ignore
 
       - name: Commit generated CSV outputs
         run: |
