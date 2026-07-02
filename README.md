@@ -89,7 +89,7 @@ Il workflow GitHub Actions è in:
 .github/workflows/update-data.yml
 ```
 
-Parte automaticamente il giorno 20 di ogni mese alle 06:00 UTC e può essere lanciato manualmente da `Actions -> Update public debt data -> Run workflow`.
+Parte automaticamente il giorno 1 di ogni mese alle 04:00 UTC e può essere lanciato manualmente da `Actions -> Update public debt data -> Run workflow`.
 
 Il workflow:
 
@@ -98,7 +98,7 @@ Il workflow:
 - aggiunge al commit solo `data/processed/`;
 - crea un commit solo se i CSV generati sono cambiati.
 
-La data del 20 lascia qualche giorno di margine rispetto alla pubblicazione mensile della Banca d'Italia. Se serve anticipare o posticipare, si modifica la riga `cron` nel workflow.
+Se si vuole modificare l'orario, si cambia la riga `cron` nel workflow.
 
 ## Output Banca d'Italia
 
