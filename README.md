@@ -15,8 +15,8 @@ Produrre file CSV aggiornabili su:
 - valuta e residenza dei creditori;
 - settori detentori del debito;
 - depositi e disponibilità liquide del Tesoro;
-- tipologie dei titoli di Stato, dove disponibili nei file del Tesoro;
-- ISIN, emissioni, aste, scadenze, rimborsi, cedole, tassi e rendimenti, dove disponibili nei file del Tesoro;
+- tipologie dei titoli di Stato pubblicati dal Tesoro;
+- ISIN, emissioni, aste, scadenze, rimborsi, cedole, tassi e rendimenti quando presenti nei file ufficiali del Tesoro;
 - tassi benchmark sui titoli pubblici italiani a lungo termine da Eurostat.
 
 ## Fonti ufficiali
@@ -40,6 +40,7 @@ Questa fonte viene usata per la serie mensile ufficiale dei rendimenti a lungo t
 ```text
 .
 ├── requirements.txt
+├── .github/workflows/update-data.yml
 └── scripts/
     ├── config.py
     ├── io_utils.py
@@ -79,6 +80,25 @@ La pipeline genera output sotto:
 ```text
 data/processed/
 ```
+
+## Aggiornamento automatico
+
+Il workflow GitHub Actions è in:
+
+```text
+.github/workflows/update-data.yml
+```
+
+Parte automaticamente il giorno 20 di ogni mese alle 06:00 UTC e può essere lanciato manualmente da `Actions -> Update public debt data -> Run workflow`.
+
+Il workflow:
+
+- installa le dipendenze Python;
+- esegue `python scripts/build_all_datasets.py`;
+- aggiunge al commit solo `data/processed/`;
+- crea un commit solo se i CSV generati sono cambiati.
+
+La data del 20 lascia qualche giorno di margine rispetto alla pubblicazione mensile della Banca d'Italia. Se serve anticipare o posticipare, si modifica la riga `cron` nel workflow.
 
 ## Output Banca d'Italia
 
