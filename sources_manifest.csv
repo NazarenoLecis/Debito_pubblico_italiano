@@ -1,0 +1,6 @@
+source_id,institution,category,url,notes
+bankitalia_fpi,Banca d'Italia,public_finance_publication,https://a2a.bancaditalia.it/infostat/dataservices/export/IT/CSV/ALL/PUBLICATION/BANKITALIA/DIFF/FPI,Base Dati Statistica publication FPI Finanza pubblica fabbisogno e debito
+mef_public_debt_home,MEF - Dipartimento del Tesoro,public_debt_home,https://www.dt.mef.gov.it/it/debito_pubblico/,Official Treasury public debt area
+mef_public_debt_statistics,MEF - Dipartimento del Tesoro,public_debt_statistics,https://www.dt.mef.gov.it/it/debito_pubblico/dati_statistici/,Official Treasury statistical data area
+mef_government_securities,MEF - Dipartimento del Tesoro,government_securities,https://www.dt.mef.gov.it/it/debito_pubblico/titoli_di_stato/,Official Treasury government securities area
+eurostat_irt_lt_mcby_m,Eurostat,long_term_government_bond_yields,https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/irt_lt_mcby_m?geo=IT&lang=en,Monthly long-term government bond yields Italy
