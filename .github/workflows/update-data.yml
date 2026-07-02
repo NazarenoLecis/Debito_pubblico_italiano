@@ -2,9 +2,8 @@ name: Update public debt data
 
 on:
   schedule:
-    # Banca d'Italia usually publishes public-finance data around mid-month.
-    # Running on the 20th gives the release a few days of buffer.
-    - cron: "0 6 20 * *"
+    # Monthly update on the first day of the month at 04:00 UTC.
+    - cron: "0 4 1 * *"
   workflow_dispatch:
 
 permissions:
