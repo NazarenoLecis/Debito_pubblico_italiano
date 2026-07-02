@@ -83,9 +83,15 @@ def contains_keyword(text, keywords):
     return any(keyword.lower() in lower for keyword in keywords)
 
 
+def remove_isins_from_text(text):
+    """Rimuove gli ISIN dal testo prima dell'estrazione numerica."""
+    return re.sub(r"\bIT[0-9A-Z]{10}\b", " ", clean_text(text).upper())
+
+
 def extract_first_number_from_text(text):
-    """Estrae il primo numero interpretabile da testo libero."""
-    candidates = re.findall(r"\(?-?\d[\d. ]*(?:,\d+)?%?\)?", clean_text(text))
+    """Estrae il primo numero interpretabile da testo libero ignorando gli ISIN."""
+    cleaned = remove_isins_from_text(text)
+    candidates = re.findall(r"\(?-?\d[\d. ]*(?:,\d+)?%?\)?", cleaned)
     for candidate in candidates:
         parsed = parse_italian_number(candidate)
         if parsed is not None:
