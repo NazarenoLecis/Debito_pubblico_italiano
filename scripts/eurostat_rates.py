@@ -39,6 +39,17 @@ def get_dimension_values(payload, dimension_name):
     return [(code, labels.get(code, code)) for code in ordered_codes]
 
 
+def get_jsonstat_value(values, linear_index):
+    """Read values from dense list payloads or sparse dictionary payloads."""
+    if isinstance(values, list):
+        if linear_index >= len(values):
+            return None
+        return values[linear_index]
+    if isinstance(values, dict):
+        return values.get(str(linear_index))
+    return None
+
+
 def flatten_jsonstat(payload):
     """Convert a compact JSON-stat payload into a rectangular DataFrame."""
     dimension_names = payload["id"]
@@ -48,7 +59,7 @@ def flatten_jsonstat(payload):
     rows = []
 
     for linear_index, coordinates in enumerate(itertools.product(*[range(length) for length in size])):
-        value = values.get(str(linear_index))
+        value = get_jsonstat_value(values, linear_index)
         if value is None:
             continue
         row = {"value": value}
