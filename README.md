@@ -1,67 +1,143 @@
 # Debito pubblico italiano
 
-Dashboard statica per GitHub Pages sull'evoluzione del debito pubblico italiano.
+Repository per scaricare e normalizzare dati ufficiali sul debito pubblico italiano.
 
-La dashboard include:
+Il repository non contiene una dashboard. Contiene codice Python per generare dataset CSV da fonti ufficiali.
 
-- evoluzione mensile del debito delle Amministrazioni pubbliche;
-- debito al netto delle disponibilità liquide del Tesoro;
-- composizione per strumento;
-- vita residua del debito e maturity bucket;
-- detentori del debito;
-- fabbisogno e variazione mensile del debito;
-- tabella con gli ultimi dati disponibili.
+## Obiettivo
 
-## Fonte dati
+Produrre file CSV aggiornabili su:
 
-Fonte principale: Banca d'Italia, *Finanza pubblica: fabbisogno e debito*.
+- evoluzione del debito pubblico nel tempo;
+- fabbisogno delle Amministrazioni pubbliche;
+- composizione del debito per strumenti;
+- vita residua e scadenza originaria;
+- valuta e residenza dei creditori;
+- settori detentori del debito;
+- depositi e disponibilità liquide del Tesoro;
+- tipologie dei titoli di Stato, dove disponibili nei file del Tesoro;
+- ISIN, emissioni, aste, scadenze, rimborsi, cedole, tassi e rendimenti, dove disponibili nei file del Tesoro;
+- tassi benchmark sui titoli pubblici italiani a lungo termine da Eurostat.
 
-Snapshot incluso:
+## Fonti ufficiali
 
-- pubblicazione: 15 giugno 2026;
-- periodo di riferimento: aprile 2026;
-- unità originale: milioni di euro.
+La pipeline usa tre blocchi di fonti.
 
-Il file dati usato dalla dashboard è `data/debt_dashboard.json`.
+1. Banca d'Italia, Base Dati Statistica, pubblicazione FPI, `Finanza pubblica: fabbisogno e debito`.
 
-## Struttura repository
+Questa fonte copre debito delle Amministrazioni pubbliche, fabbisogno, strumenti, vita residua, scadenza originaria, valuta, residenza dei creditori, detentori e attività liquide.
+
+2. MEF, Dipartimento del Tesoro, area debito pubblico e titoli di Stato.
+
+Questa fonte viene usata per i dettagli granulari sui titoli del Tesoro, inclusi BOT, BTP, CCTeu, BTP Italia, BTP€i, BTP Valore, ISIN, aste, emissioni, scadenze, rimborsi, cedole, tassi e rendimenti quando presenti nei file ufficiali pubblicati dal Tesoro.
+
+3. Eurostat, dataset `irt_lt_mcby_m`.
+
+Questa fonte viene usata per la serie mensile ufficiale dei rendimenti a lungo termine sui titoli di Stato italiani.
+
+## Struttura
 
 ```text
 .
-├── index.html
-├── assets/
-│   ├── css/styles.css
-│   └── js/app.js
-├── data/
-│   └── debt_dashboard.json
-├── scripts/
-│   └── update_data.py
-├── .github/workflows/update-data.yml
-└── .nojekyll
+├── requirements.txt
+└── scripts/
+    ├── config.py
+    ├── io_utils.py
+    ├── bankitalia_fpi.py
+    ├── mef_discovery.py
+    ├── mef_treasury.py
+    ├── eurostat_rates.py
+    └── build_all_datasets.py
 ```
 
-## GitHub Pages
+## Installazione
 
-Per pubblicare la dashboard:
+Da terminale, nella cartella del repository:
 
-1. apri `Settings` del repository;
-2. vai su `Pages`;
-3. seleziona `Deploy from a branch`;
-4. scegli `main` e cartella `/root`;
-5. salva.
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-L'indirizzo sarà normalmente:
+Su Windows PowerShell:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+## Esecuzione completa
+
+```bash
+python scripts/build_all_datasets.py
+```
+
+La pipeline genera output sotto:
 
 ```text
-https://nazarenolecis.github.io/Debito_pubblico_italiano/
+data/processed/
 ```
 
-## Aggiornamento dati
+## Output Banca d'Italia
 
-Lo script `scripts/update_data.py` è predisposto per cercare la pubblicazione mensile della Banca d'Italia e aggiornare il JSON. Il workflow GitHub Actions parte ogni mese e può essere lanciato anche manualmente.
+```text
+data/processed/bankitalia/fpi_all_data.csv
+data/processed/bankitalia/fpi_core_tables.csv
+data/processed/bankitalia/fpi_all_metadata.csv
+data/processed/bankitalia/fpi_catalog.csv
+data/processed/bankitalia/tables/*.csv
+data/processed/bankitalia/metadata/*.csv
+```
 
-Il parsing automatico di PDF statistici può richiedere correzioni se la struttura della pubblicazione cambia. Per questo il dataset prodotto va verificato prima di usarlo per pubblicazioni o analisi ufficiali.
+`fpi_all_data.csv` concatena tutte le tavole dati della pubblicazione FPI mantenendo tutte le colonne originali. `fpi_core_tables.csv` filtra le tavole principali utili per debito, strumenti, detentori, vita residua, scadenza originaria, valuta e residenza.
 
-## Limiti attuali
+## Output MEF / Tesoro
 
-La prima versione usa il report Banca d'Italia. La scomposizione disponibile è quella per strumenti statistici, vita residua, scadenza originaria, valuta, residenza e detentori. Una scomposizione più granulare per singola tipologia di titolo del Tesoro, come BOT, BTP, CCTeu, BTP Italia, BTP€i, BTP Valore e scadenze per singolo ISIN, richiede una seconda fonte MEF/Dipartimento del Tesoro e può essere aggiunta in un modulo dati separato.
+```text
+data/processed/mef/mef_pages.csv
+data/processed/mef/mef_links.csv
+data/processed/mef/mef_download_catalog.csv
+data/processed/mef/mef_all_tables_wide.csv
+data/processed/mef/mef_all_cells_long.csv
+data/processed/mef/files/*.csv
+```
+
+`mef_all_tables_wide.csv` conserva le tabelle in formato vicino all'originale. `mef_all_cells_long.csv` conserva ogni cella con numero di riga, numero di colonna, URL fonte, pagina fonte, file locale e foglio Excel. Questo formato serve per non perdere dettagli quando i file del Tesoro hanno intestazioni multiple, note o layout non standard.
+
+## Output Eurostat
+
+```text
+data/processed/eurostat/italy_long_term_government_bond_yield.csv
+data/processed/eurostat/eurostat_rates_metadata.json
+```
+
+## Configurazione
+
+Le impostazioni sono in:
+
+```text
+scripts/config.py
+```
+
+Da lì si modificano:
+
+- cartelle di output;
+- URL iniziali del Tesoro;
+- parole chiave per trovare file rilevanti;
+- profondità massima di esplorazione delle pagine MEF;
+- opzioni Banca d'Italia BDS;
+- dataset Eurostat.
+
+## Principio metodologico
+
+La pipeline privilegia la conservazione del dato grezzo ufficiale. Per questo:
+
+- non elimina colonne originali;
+- non forza tutte le fonti in uno schema unico;
+- aggiunge colonne di provenienza a ogni output;
+- salva cataloghi delle fonti scaricate;
+- produce sia formato wide sia formato cella-per-riga per i file del Tesoro.
+
+Un dataset analitico finale con variabili standardizzate, per esempio `date`, `isin`, `security_type`, `auction_yield`, `coupon`, `issue_amount`, `outstanding_amount`, `maturity_date`, può essere costruito sopra questi CSV dopo aver verificato i layout effettivi dei file MEF scaricati.
