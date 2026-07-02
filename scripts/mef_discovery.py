@@ -1,9 +1,4 @@
-"""MEF / Treasury source discovery utilities.
-
-The functions search only official Treasury pages listed in config.py. They find
-CSV, XLS, XLSX and ZIP files with detailed information on government securities,
-auctions, maturities, ISINs, rates and redemptions.
-"""
+"""MEF / Treasury source discovery utilities."""
 
 import re
 from pathlib import Path
@@ -11,18 +6,35 @@ from urllib.parse import urlparse
 
 import pandas as pd
 
-from config import MEF_ALLOWED_DOMAIN, MEF_FILE_EXTENSIONS, MEF_LINK_KEYWORDS, MEF_MAX_CRAWL_PAGES, MEF_MAX_DEPTH, MEF_START_URLS, PROCESSED_DIR, RAW_DIR
+from config import MEF_ALLOWED_DOMAIN, MEF_FILE_EXTENSIONS, MEF_LINK_KEYWORDS, MEF_MAX_CRAWL_PAGES, MEF_MAX_DEPTH, MEF_START_URLS, PROCESSED_DIR, RAW_DIR, SOURCE_MANIFEST_FILE
 from io_utils import absolute_url, make_folder, request_bytes, safe_filename, same_domain, stable_hash, url_extension, write_csv
 
 
 def has_keyword(text):
-    """Return True if a text contains a configured debt-related keyword."""
     text = str(text).lower()
     return any(keyword.lower() in text for keyword in MEF_LINK_KEYWORDS)
 
 
+def load_manifest_mef_urls():
+    if not SOURCE_MANIFEST_FILE.exists():
+        return []
+    manifest = pd.read_csv(SOURCE_MANIFEST_FILE, dtype=str, keep_default_na=False)
+    if "institution" not in manifest.columns or "url" not in manifest.columns:
+        return []
+    mask = manifest["institution"].str.contains("MEF", case=False, na=False)
+    urls = manifest.loc[mask, "url"].drop_duplicates().tolist()
+    return [url for url in urls if same_domain(url, MEF_ALLOWED_DOMAIN)]
+
+
+def get_start_urls():
+    urls = []
+    for url in load_manifest_mef_urls() + MEF_START_URLS:
+        if url not in urls:
+            urls.append(url)
+    return urls
+
+
 def keep_link(url, label):
-    """Keep internal Treasury links that point to relevant pages or files."""
     if not same_domain(url, MEF_ALLOWED_DOMAIN):
         return False
     ext = url_extension(url)
@@ -35,18 +47,13 @@ def keep_link(url, label):
 
 
 def extract_html_links(html):
-    """Extract href and visible label pairs using only the Python standard library."""
-    pattern = re.compile(r"<a[^>]+href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>", flags=re.I | re.S)
-    rows = []
-    for href, label_html in pattern.findall(html):
-        label = re.sub(r"<[^>]+>", " ", label_html)
-        label = re.sub(r"\s+", " ", label).strip()
-        rows.append((href, label))
-    return rows
+    links = []
+    for href in re.findall(r"href=[\"']([^\"']+)[\"']", html, flags=re.I):
+        links.append((href, href))
+    return links
 
 
 def links_from_page(page_url):
-    """Read one Treasury page and extract relevant links."""
     html = request_bytes(page_url).decode("utf-8", errors="replace")
     rows = []
     for href, label in extract_html_links(html):
@@ -57,8 +64,7 @@ def links_from_page(page_url):
 
 
 def discover_mef_links():
-    """Discover official MEF file links and pages from configured start URLs."""
-    queue = [(url, 0) for url in MEF_START_URLS]
+    queue = [(url, 0) for url in get_start_urls()]
     visited = set()
     files = {}
     pages = []
@@ -82,7 +88,6 @@ def discover_mef_links():
 
 
 def local_path_for_url(url):
-    """Create a deterministic local path for a Treasury source URL."""
     parsed = urlparse(url)
     ext = Path(parsed.path).suffix.lower() or ".bin"
     name = safe_filename(Path(parsed.path).name, "mef_file")
@@ -92,7 +97,6 @@ def local_path_for_url(url):
 
 
 def download_mef_links(file_links):
-    """Download discovered files and return a catalogue DataFrame."""
     make_folder(RAW_DIR / "mef")
     rows = []
     for link in file_links:
@@ -108,7 +112,6 @@ def download_mef_links(file_links):
 
 
 def build_mef_discovery_catalog():
-    """Save discovery outputs under data/processed/mef."""
     output_dir = PROCESSED_DIR / "mef"
     make_folder(output_dir)
     links, pages = discover_mef_links()
