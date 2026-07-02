@@ -12,6 +12,7 @@ import re
 from pathlib import Path
 
 import pandas as pd
+from pandas.errors import EmptyDataError
 
 
 SOURCE_PREFIXES = ["source_", "downloaded_at_"]
@@ -225,15 +226,22 @@ def read_csv_if_exists(path):
         return pd.DataFrame()
     if path.stat().st_size == 0:
         return pd.DataFrame()
-    return pd.read_csv(path, dtype=str, keep_default_na=False)
+    try:
+        return pd.read_csv(path, dtype=str, keep_default_na=False)
+    except EmptyDataError:
+        return pd.DataFrame()
 
 
 def write_csv_if_not_empty(df, path):
-    """Scrive un CSV solo se il DataFrame contiene righe."""
+    """Scrive un CSV anche quando il DataFrame è vuoto.
+
+    I file vuoti vengono creati a dimensione zero. Questo evita EmptyDataError
+    nei controlli qualità quando una fonte non produce righe.
+    """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     if df is None or df.empty:
-        pd.DataFrame().to_csv(path, index=False, encoding="utf-8")
+        path.write_text("", encoding="utf-8")
     else:
         df.to_csv(path, index=False, encoding="utf-8")
     return path
