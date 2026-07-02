@@ -13,6 +13,9 @@ from pathlib import Path
 DATA_DIR = Path("data")
 RAW_DIR = DATA_DIR / "raw"
 PROCESSED_DIR = DATA_DIR / "processed"
+FINAL_DIR = PROCESSED_DIR / "final"
+QUALITY_DIR = PROCESSED_DIR / "quality"
+SOURCE_MANIFEST_FILE = Path("sources_manifest.csv")
 
 
 # General behaviour.
@@ -57,9 +60,9 @@ BANKITALIA_CORE_TABLES = {
 
 
 # MEF / Dipartimento del Tesoro source.
-# The site structure changes over time. The crawler starts from official public
-# debt pages, follows internal links that contain public-debt keywords and
-# downloads tabular files. Keep MAX_CRAWL_PAGES conservative when testing.
+# The crawler starts from the manifest when available and falls back to these
+# URLs. It follows internal links that contain public-debt keywords and
+# downloads tabular files.
 MEF_START_URLS = [
     "https://www.dt.mef.gov.it/it/debito_pubblico/",
     "https://www.dt.mef.gov.it/it/debito_pubblico/dati_statistici/",
