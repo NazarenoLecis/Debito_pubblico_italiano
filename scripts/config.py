@@ -1,26 +1,29 @@
-"""
-Configuration for the public debt data pipeline.
+"""Configuration for the Italian public debt data pipeline.
 
-The scripts do not use argparse on purpose. Change the variables in this file
-when you want to modify sources, folders or behaviour.
+The project uses one Python configuration file instead of YAML or argparse.
+Change the variables in this file when sources, folders or pipeline behaviour
+need to be updated.
 """
 
 from pathlib import Path
 
 
-# Root folders. All generated files stay under data/ so that they can be
-# inspected, committed, ignored or published separately.
-DATA_DIR = Path("data")
+# Root folders. The repository keeps generated outputs under output/.
+# output/data contains datasets, raw downloads, metadata and quality reports.
+# output/charts is reserved for future figures built from the final datasets.
+OUTPUT_DIR = Path("output")
+DATA_DIR = OUTPUT_DIR / "data"
+CHARTS_DIR = OUTPUT_DIR / "charts"
 RAW_DIR = DATA_DIR / "raw"
-PROCESSED_DIR = DATA_DIR / "processed"
-FINAL_DIR = PROCESSED_DIR / "final"
-QUALITY_DIR = PROCESSED_DIR / "quality"
+PROCESSED_DIR = DATA_DIR
+FINAL_DIR = DATA_DIR / "final"
+QUALITY_DIR = DATA_DIR / "quality"
 SOURCE_MANIFEST_FILE = Path("sources_manifest.csv")
 
 
 # General behaviour.
 # KEEP_RAW_FILES=True stores the original official downloads.
-# CLEAN_OUTPUT=True removes old processed outputs before rebuilding.
+# CLEAN_OUTPUT=True rebuilds source-level output folders from scratch.
 KEEP_RAW_FILES = True
 CLEAN_OUTPUT = True
 REQUEST_TIMEOUT_SECONDS = 180
