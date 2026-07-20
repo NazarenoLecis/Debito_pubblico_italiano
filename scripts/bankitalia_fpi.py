@@ -72,7 +72,7 @@ def infer_file_kind(member_name):
 def infer_table_code(member_name, columns):
     """Cerca un codice tavola BDS nel nome file o nelle colonne."""
     text = " ".join([member_name] + [str(column) for column in columns]).upper()
-    match = re.search(r"\bTCCE\d{4}\b", text)
+    match = re.search(r"TCCE\d{4}", text)
     if match:
         return match.group(0)
     return ""
@@ -97,9 +97,8 @@ def add_bankitalia_provenance(df, member_name, file_kind, table_code, source_url
     return out
 
 
-def read_bankitalia_member(zip_file, member_name, source_url, downloaded_at):
+def read_bankitalia_member(raw, member_name, source_url, downloaded_at):
     """Legge un CSV dentro lo ZIP BDS e restituisce una tavola arricchita."""
-    raw = zip_file.read(member_name)
     df, parse_info = read_csv_bytes(raw)
     file_kind = infer_file_kind(member_name)
     table_code = infer_table_code(member_name, df.columns)
@@ -113,10 +112,25 @@ def save_bankitalia_member(df, member_name, file_kind, output_dir):
         subfolder = output_dir / "tables"
     else:
         subfolder = output_dir / "metadata" / file_kind
-    file_name = safe_filename(member_name, "bankitalia_member")
+    file_name = safe_filename(str(member_name).replace("\\", "_").replace("/", "_"), "bankitalia_member")
     if not file_name.lower().endswith(".csv"):
         file_name = f"{file_name}.csv"
     return write_csv(df, subfolder / file_name)
+
+
+def iter_bankitalia_csv_members(zip_file, parent_name=""):
+    """Restituisce i CSV anche quando la pubblicazione BDS contiene ZIP annidati."""
+    for member_name in zip_file.namelist():
+        if member_name.endswith("/"):
+            continue
+        logical_name = f"{parent_name}/{member_name}" if parent_name else member_name
+        raw = zip_file.read(member_name)
+        lower_name = member_name.lower()
+        if lower_name.endswith(".csv"):
+            yield logical_name, raw
+        elif lower_name.endswith(".zip") and raw.startswith(b"PK"):
+            with zipfile.ZipFile(io.BytesIO(raw)) as nested_zip:
+                yield from iter_bankitalia_csv_members(nested_zip, logical_name)
 
 
 def process_bankitalia_zip(zip_content, source_url, output_dir):
@@ -127,12 +141,12 @@ def process_bankitalia_zip(zip_content, source_url, output_dir):
     catalog_rows = []
 
     with zipfile.ZipFile(io.BytesIO(zip_content)) as zip_file:
-        csv_members = [name for name in zip_file.namelist() if name.lower().endswith(".csv")]
+        csv_members = list(iter_bankitalia_csv_members(zip_file))
         if not csv_members:
             raise RuntimeError("Lo ZIP BDS non contiene file CSV.")
 
-        for member_name in csv_members:
-            df, file_kind, table_code = read_bankitalia_member(zip_file, member_name, source_url, downloaded_at)
+        for member_name, raw in csv_members:
+            df, file_kind, table_code = read_bankitalia_member(raw, member_name, source_url, downloaded_at)
             output_path = save_bankitalia_member(df, member_name, file_kind, output_dir)
 
             if file_kind == "data":

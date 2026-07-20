@@ -30,8 +30,21 @@ def clean_folder(path):
     """Svuota una cartella e la ricrea. Serve per run riproducibili."""
     path = Path(path)
     if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
+        for child in path.iterdir():
+            try:
+                if child.is_dir():
+                    shutil.rmtree(child)
+                else:
+                    child.unlink()
+            except PermissionError:
+                if child.is_dir():
+                    for nested_file in child.rglob("*"):
+                        if nested_file.is_file():
+                            nested_file.unlink()
+                else:
+                    raise
+    else:
+        path.mkdir(parents=True, exist_ok=True)
 
 
 def make_folder(path):
@@ -80,11 +93,27 @@ def write_json(payload, path):
     return path
 
 
-def write_csv(df, path):
-    """Salva un DataFrame in CSV UTF-8 senza indice."""
+def write_dataframe_json(df, path):
+    """Salva un DataFrame in JSON records leggibile dal frontend."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    if df is None or df.empty:
+        path.write_text("[]\n", encoding="utf-8")
+    else:
+        df.to_json(path, orient="records", force_ascii=False)
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write("\n")
+    return path
+
+
+def write_csv(df, path):
+    """Salva un DataFrame in CSV UTF-8 e crea il JSON records gemello."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if df is None:
+        df = pd.DataFrame()
     df.to_csv(path, index=False, encoding="utf-8")
+    write_dataframe_json(df, path.with_suffix(".json"))
     return path
 
 
@@ -170,14 +199,17 @@ def url_extension(url):
     return Path(urlparse(url).path).suffix.lower()
 
 
-def extract_zip(zip_path, output_dir):
+def extract_zip(zip_path, output_dir, allowed_extensions=None):
     """Estrae uno ZIP usando nomi file sanitizzati e restituisce i file estratti."""
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    allowed_extensions = [item.lower() for item in allowed_extensions] if allowed_extensions else None
     extracted = []
     with zipfile.ZipFile(zip_path) as archive:
         for member in archive.infolist():
             if member.is_dir():
+                continue
+            if allowed_extensions and Path(member.filename).suffix.lower() not in allowed_extensions:
                 continue
             target = output_dir / safe_filename(member.filename, "zip_member")
             target.write_bytes(archive.read(member.filename))

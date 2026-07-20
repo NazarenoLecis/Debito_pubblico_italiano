@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 import pandas as pd
 
-from config import MEF_ALLOWED_DOMAIN, MEF_FILE_EXTENSIONS, MEF_LINK_KEYWORDS, MEF_MAX_CRAWL_PAGES, MEF_MAX_DEPTH, MEF_START_URLS, PROCESSED_DIR, RAW_DIR, SOURCE_MANIFEST_FILE
+from config import MEF_ALLOWED_DOMAIN, MEF_EXCLUDED_FILE_KEYWORDS, MEF_FILE_EXTENSIONS, MEF_LINK_KEYWORDS, MEF_MAX_CRAWL_PAGES, MEF_MAX_DEPTH, MEF_START_URLS, PROCESSED_DIR, RAW_DIR, SOURCE_MANIFEST_FILE
 from io_utils import absolute_url, make_folder, request_bytes, safe_filename, same_domain, stable_hash, url_extension, write_csv
 
 
@@ -39,6 +39,8 @@ def keep_link(url, label):
         return False
     ext = url_extension(url)
     text = f"{url} {label}"
+    if any(keyword.lower() in text.lower() for keyword in MEF_EXCLUDED_FILE_KEYWORDS):
+        return False
     if ext in MEF_FILE_EXTENSIONS:
         return has_keyword(text)
     if ext in ["", ".html", ".htm"]:

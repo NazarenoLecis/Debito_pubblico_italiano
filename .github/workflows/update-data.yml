@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   actions: read
 
 concurrency:
@@ -46,19 +46,14 @@ jobs:
         with:
           name: public-debt-quality-report
           path: |
-            data/processed/pipeline_run_metadata.json
-            data/processed/quality/validation_report.csv
-            data/processed/quality/validation_summary.json
+            output/data/pipeline_run_metadata.json
+            output/data/quality/validation_report.csv
+            output/data/quality/validation_report.json
+            output/data/quality/validation_summary.json
+            output/data/public/debito-pubblico.json
           if-no-files-found: ignore
 
-      - name: Commit generated CSV outputs
+      - name: Explain publication route
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/processed
-          if git diff --cached --quiet; then
-            echo "No data changes to commit."
-          else
-            git commit -m "Update public debt datasets"
-            git push
-          fi
+          echo "This repository validates and builds the data artifacts."
+          echo "The monthly R2 publication is orchestrated by nazarenolecis-data-pipeline."

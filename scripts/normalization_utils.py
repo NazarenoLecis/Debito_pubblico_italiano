@@ -233,17 +233,22 @@ def read_csv_if_exists(path):
 
 
 def write_csv_if_not_empty(df, path):
-    """Scrive un CSV anche quando il DataFrame è vuoto.
+    """Scrive CSV finali e crea anche il JSON records gemello.
 
     I file vuoti vengono creati a dimensione zero. Questo evita EmptyDataError
     nei controlli qualità quando una fonte non produce righe.
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    json_path = path.with_suffix(".json")
     if df is None or df.empty:
         path.write_text("", encoding="utf-8")
+        json_path.write_text("[]\n", encoding="utf-8")
     else:
         df.to_csv(path, index=False, encoding="utf-8")
+        df.to_json(json_path, orient="records", force_ascii=False)
+        with json_path.open("a", encoding="utf-8") as handle:
+            handle.write("\n")
     return path
 
 

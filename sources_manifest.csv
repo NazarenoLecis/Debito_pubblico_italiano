@@ -4,3 +4,4 @@ mef_public_debt_home,MEF - Dipartimento del Tesoro,public_debt_home,https://www.
 mef_public_debt_statistics,MEF - Dipartimento del Tesoro,public_debt_statistics,https://www.dt.mef.gov.it/it/debito_pubblico/dati_statistici/,Official Treasury statistical data area
 mef_government_securities,MEF - Dipartimento del Tesoro,government_securities,https://www.dt.mef.gov.it/it/debito_pubblico/titoli_di_stato/,Official Treasury government securities area
 eurostat_irt_lt_mcby_m,Eurostat,long_term_government_bond_yields,https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/irt_lt_mcby_m?geo=IT&lang=en,Monthly long-term government bond yields Italy
+eurostat_gov_10a_main_d41pay,Eurostat,public_debt_interest_cost,https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/gov_10a_main?geo=IT&na_item=D41PAY&sector=S13&unit=MIO_EUR&unit=PC_GDP&lang=en,Annual general-government interest payable Italy in million euro and percentage of GDP

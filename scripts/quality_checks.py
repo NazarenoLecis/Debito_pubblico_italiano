@@ -21,8 +21,10 @@ CRITICAL_FILES = [
     PROCESSED_DIR / "bankitalia" / "fpi_core_tables.csv",
     PROCESSED_DIR / "mef" / "mef_download_catalog.csv",
     PROCESSED_DIR / "eurostat" / "italy_long_term_government_bond_yield.csv",
+    PROCESSED_DIR / "eurostat" / "italy_public_debt_interest_cost.csv",
     PROCESSED_DIR / "final" / "debt_by_instrument.csv",
     PROCESSED_DIR / "final" / "interest_rates.csv",
+    PROCESSED_DIR / "final" / "debt_interest_cost.csv",
 ]
 
 WARNING_FILES = [
@@ -157,6 +159,7 @@ def build_quality_report():
     checks.append(check_mef_downloads())
     checks.append(check_required_columns(PROCESSED_DIR / "final" / "debt_by_instrument.csv", ["standard_table_code", "value_mln_eur"], "critical"))
     checks.append(check_required_columns(PROCESSED_DIR / "final" / "interest_rates.csv", ["rate_source", "rate_type"], "critical"))
+    checks.append(check_required_columns(PROCESSED_DIR / "final" / "debt_interest_cost.csv", ["date", "cost_measure", "value"], "critical"))
     checks.append(check_no_duplicate_dates(PROCESSED_DIR / "final" / "debt_total_monthly.csv", "date", "warning"))
 
     report = pd.DataFrame(checks)

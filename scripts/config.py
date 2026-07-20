@@ -59,6 +59,7 @@ BANKITALIA_CORE_TABLES = {
     "TCCE0325": "Debito delle Amministrazioni pubbliche per vita residua",
     "TCCE0350": "Debito delle Amministrazioni pubbliche per scadenza originaria, strumento, valuta e residenza dei creditori",
     "TCCE0375": "Debito delle Amministrazioni centrali per scadenza originaria, strumento, valuta e residenza dei creditori",
+    "TCCE0400": "Indebitamento netto e debito delle Amministrazioni pubbliche in percentuale del PIL",
 }
 
 
@@ -93,6 +94,12 @@ MEF_LINK_KEYWORDS = [
     "statistici",
 ]
 MEF_FILE_EXTENSIONS = [".csv", ".xlsx", ".xls", ".zip"]
+MEF_EXCLUDED_FILE_KEYWORDS = [
+    "video",
+    "avi",
+    "mp4",
+    "multimedia",
+]
 
 
 # Eurostat source for benchmark long-term government bond yields.
@@ -103,4 +110,17 @@ EUROSTAT_LONG_TERM_YIELD_DATASET = "irt_lt_mcby_m"
 EUROSTAT_LONG_TERM_YIELD_FILTERS = {
     "geo": "IT",
     "lang": "en",
+}
+
+# Eurostat government finance source for the cost of public debt.
+# D41PAY is ESA 2010 interest payable by general government. Eurostat exposes
+# both nominal values and values as a percentage of GDP, so the public payload
+# can switch between official measures without recalculating the denominator.
+EUROSTAT_DEBT_COST_DATASET = "gov_10a_main"
+EUROSTAT_DEBT_COST_FILTERS = {
+    "geo": "IT",
+    "lang": "en",
+    "na_item": "D41PAY",
+    "sector": "S13",
+    "unit": ["MIO_EUR", "PC_GDP"],
 }

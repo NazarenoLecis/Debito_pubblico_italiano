@@ -52,6 +52,7 @@ FINAL_TABLES = {
     "TCCE0325": "debt_by_residual_maturity.csv",
     "TCCE0350": "debt_by_original_maturity_currency_residency.csv",
     "TCCE0375": "central_government_debt_by_original_maturity_currency_residency.csv",
+    "TCCE0400": "debt_fiscal_indicators.csv",
 }
 
 

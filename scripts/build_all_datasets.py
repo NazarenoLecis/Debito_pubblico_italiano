@@ -11,9 +11,11 @@ not use classes.
 import sys
 
 from bankitalia_fpi import build_bankitalia_fpi_dataset
-from eurostat_rates import build_italian_long_term_yield_dataset
+from build_public_payload import write_public_payload
+from eurostat_rates import build_italian_long_term_yield_dataset, build_italian_public_debt_cost_dataset
 from mef_treasury import build_mef_treasury_dataset
 from normalize_bankitalia import build_bankitalia_final_tables
+from normalize_eurostat import build_eurostat_final_tables
 from normalize_mef import build_mef_final_tables
 from quality_checks import build_quality_report
 from config import PROCESSED_DIR
@@ -45,6 +47,7 @@ def build_source_datasets():
         ("bankitalia_fpi", build_bankitalia_fpi_dataset),
         ("mef_treasury", build_mef_treasury_dataset),
         ("eurostat_rates", build_italian_long_term_yield_dataset),
+        ("eurostat_debt_cost", build_italian_public_debt_cost_dataset),
     ]
     return [run_pipeline_step(name, function) for name, function in steps]
 
@@ -54,6 +57,8 @@ def build_final_datasets():
     steps = [
         ("normalize_bankitalia", build_bankitalia_final_tables),
         ("normalize_mef", build_mef_final_tables),
+        ("normalize_eurostat", build_eurostat_final_tables),
+        ("public_payload", write_public_payload),
     ]
     return [run_pipeline_step(name, function) for name, function in steps]
 

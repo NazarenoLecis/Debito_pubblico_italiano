@@ -203,6 +203,11 @@ cython_debug/
 # Temporary file for partial code execution
 tempCodeRunnerFile.py
 
+# Generated data output. The pipeline rebuilds these files locally and in
+# GitHub Actions; the public JSON is published through the data-pipeline repo.
+output/data/*
+!output/data/README.md
+
 # Ruff stuff:
 .ruff_cache/
 

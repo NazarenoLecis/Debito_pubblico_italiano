@@ -107,7 +107,11 @@ def process_excel_source(path, row, output_dir):
 
 def process_zip_source(path, row, output_dir):
     """Extract a Treasury ZIP and process tabular files inside it."""
-    extracted = extract_zip(Path(path), output_dir / "zip_extracted" / safe_filename(Path(path).stem, "zip"))
+    extracted = extract_zip(
+        Path(path),
+        output_dir / "zip_extracted" / safe_filename(Path(path).stem, "zip"),
+        allowed_extensions=[".csv", ".xlsx", ".xls"],
+    )
     wide_frames = []
     cell_frames = []
     for child_path in extracted:
