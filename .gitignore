@@ -207,6 +207,8 @@ tempCodeRunnerFile.py
 # GitHub Actions; the public JSON is published through the data-pipeline repo.
 output/data/*
 !output/data/README.md
+output/charts/*
+!output/charts/README.md
 
 # Ruff stuff:
 .ruff_cache/

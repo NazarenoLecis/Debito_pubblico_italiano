@@ -67,6 +67,10 @@ Il file `sources_manifest.csv` documenta le fonti ufficiali di partenza.
 |   |-- build_public_payload.py
 |   |-- quality_checks.py
 |   `-- build_all_datasets.py
+|-- notebooks/
+|   |-- 01_quadro_generale.ipynb
+|   |-- 02_profilo_scadenze.ipynb
+|   `-- 03_costo_e_rendimenti.ipynb
 `-- tests/
     `-- test_normalization_utils.py
 ```
@@ -96,6 +100,30 @@ python -m pytest
 ```
 
 I test coprono le utility di parsing per numeri italiani, date, ISIN e classificazione di base delle tipologie di titolo.
+
+## Notebook di analisi
+
+I notebook in `notebooks/` sono pensati per analisi esplorativa e riproduzione dei grafici principali. Leggono il file:
+
+```text
+output/data/public/debito-pubblico.json
+```
+
+Per aggiornarli con i dati piu recenti:
+
+```bash
+python scripts/build_all_datasets.py
+```
+
+Poi apri i notebook:
+
+```text
+notebooks/01_quadro_generale.ipynb
+notebooks/02_profilo_scadenze.ipynb
+notebooks/03_costo_e_rendimenti.ipynb
+```
+
+Ogni figura include in basso a sinistra fonte ed elaborazione.
 
 ## Esecuzione completa
 
