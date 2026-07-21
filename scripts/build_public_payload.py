@@ -399,11 +399,12 @@ def latest_security_yield(security_yields, series_key):
     return None
 
 
-def build_kpis(main_series, rates, debt_cost, security_yields):
+def build_kpis(main_series, rates, debt_cost, security_yields, maturity_profile):
     total = main_series.get("total_debt")
     debt_to_gdp = main_series.get("debt_to_gdp")
     latest_rate = latest_security_yield(security_yields, "btp_10y")
     debt_cost_latest = debt_cost.get("measures", {}).get("nominal", {}).get("latest") if debt_cost else None
+    weighted_average_residual_years = maturity_profile.get("weighted_average_residual_years") if maturity_profile else None
     kpis = []
     if total:
         kpis.append({
@@ -420,6 +421,14 @@ def build_kpis(main_series, rates, debt_cost, security_yields):
             "value": debt_to_gdp["latest_value_mln_eur"],
             "unit": "% PIL",
             "date": debt_to_gdp["latest_date"],
+        })
+    if weighted_average_residual_years is not None:
+        kpis.append({
+            "id": "average_residual_life",
+            "label": "Vita media residua",
+            "value": weighted_average_residual_years,
+            "unit": "anni",
+            "date": maturity_profile.get("snapshot_date"),
         })
     if latest_rate:
         kpis.append({
@@ -729,7 +738,7 @@ def build_public_payload():
             "maturity_profile_yearly": ["year", "amount_eur_revalued", "amount_bln_eur_revalued", "share_percent"],
             "maturity_profile_quarterly": ["year", "quarter", "amount_eur_revalued", "amount_bln_eur_revalued", "share_percent"],
         },
-        "kpis": build_kpis(main_series, rates, debt_cost, security_yields),
+        "kpis": build_kpis(main_series, rates, debt_cost, security_yields, maturity_profile),
         "main_series": main_series,
         "debt_cost": debt_cost,
         "security_yields": security_yields,
