@@ -11,6 +11,7 @@ not use classes.
 import sys
 
 from bankitalia_fpi import build_bankitalia_fpi_dataset
+from bankitalia_market_rates import build_bankitalia_market_rates_dataset
 from build_public_payload import write_public_payload
 from eurostat_rates import build_italian_long_term_yield_dataset, build_italian_public_debt_cost_dataset
 from mef_treasury import build_mef_treasury_dataset
@@ -45,6 +46,7 @@ def build_source_datasets():
     """Download and convert source-level datasets."""
     steps = [
         ("bankitalia_fpi", build_bankitalia_fpi_dataset),
+        ("bankitalia_market_rates", build_bankitalia_market_rates_dataset),
         ("mef_treasury", build_mef_treasury_dataset),
         ("eurostat_rates", build_italian_long_term_yield_dataset),
         ("eurostat_debt_cost", build_italian_public_debt_cost_dataset),

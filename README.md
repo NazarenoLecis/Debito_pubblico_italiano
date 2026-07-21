@@ -18,13 +18,14 @@ Produrre output aggiornabili in CSV e JSON su:
 - depositi e disponibilita liquide del Tesoro;
 - tipologie dei titoli di Stato pubblicati dal Tesoro;
 - ISIN, emissioni, aste, scadenze, rimborsi, cedole, tassi e rendimenti quando presenti nei file ufficiali del Tesoro;
-- tassi benchmark sui titoli pubblici italiani a lungo termine da Eurostat;
+- rendimenti lordi all'emissione di BOT e BTP per scadenza da Banca d'Italia;
+- rendimento di riferimento a lungo termine sui titoli pubblici italiani da Eurostat;
 - costo del debito pubblico, in valori nominali e in percentuale del PIL, da Eurostat;
 - payload pubblico compatto per riuso web.
 
 ## Fonti ufficiali
 
-La pipeline usa tre blocchi di fonti.
+La pipeline usa quattro blocchi di fonti.
 
 1. Banca d'Italia, Base Dati Statistica, pubblicazione FPI, `Finanza pubblica: fabbisogno e debito`.
 
@@ -34,9 +35,13 @@ Questa fonte copre debito delle Amministrazioni pubbliche, fabbisogno, strumenti
 
 Questa fonte viene usata per i dettagli granulari sui titoli del Tesoro, inclusi BOT, BTP, CCTeu, BTP Italia, BTP euro indicizzati, BTP Valore, ISIN, aste, emissioni, scadenze, rimborsi, cedole, tassi e rendimenti quando presenti nei file ufficiali pubblicati dal Tesoro.
 
-3. Eurostat, dataset `irt_lt_mcby_m` e `gov_10a_main`.
+3. Banca d'Italia, Base Dati Statistica, cubo `RTIT0100`.
 
-Questa fonte viene usata per la serie mensile ufficiale dei rendimenti a lungo termine sui titoli di Stato italiani e per la voce annuale `D41PAY`, interessi passivi delle Amministrazioni pubbliche, in milioni di euro e in percentuale del PIL.
+Questa fonte viene usata per i rendimenti lordi mensili all'emissione dei titoli di Stato, inclusi BOT 12 mesi e BTP a 5, 10 e 20 anni.
+
+4. Eurostat, dataset `irt_lt_mcby_m` e `gov_10a_main`.
+
+Questa fonte viene usata per la serie mensile ufficiale del rendimento di riferimento a lungo termine sui titoli di Stato italiani e per la voce annuale `D41PAY`, interessi passivi delle Amministrazioni pubbliche, in milioni di euro e in percentuale del PIL.
 
 Il file `sources_manifest.csv` documenta le fonti ufficiali di partenza.
 
@@ -52,6 +57,7 @@ Il file `sources_manifest.csv` documenta le fonti ufficiali di partenza.
 |   |-- io_utils.py
 |   |-- normalization_utils.py
 |   |-- bankitalia_fpi.py
+|   |-- bankitalia_market_rates.py
 |   |-- mef_discovery.py
 |   |-- mef_treasury.py
 |   |-- eurostat_rates.py
@@ -196,6 +202,8 @@ output/data/final/interest_rates.csv
 output/data/final/interest_rates.json
 output/data/final/debt_interest_cost.csv
 output/data/final/debt_interest_cost.json
+output/data/final/security_issuance_yields.csv
+output/data/final/security_issuance_yields.json
 ```
 
 I dataset finali mantengono le colonne originali e aggiungono campi standard quando riconosciuti, per esempio `date`, `value_mln_eur`, `standard_table_code`, `standard_table_name`, `isin`, `security_type`, `candidate_date_1`, `candidate_numeric_value`, `rate_source` e `rate_type`.
@@ -232,7 +240,7 @@ Il workflow GitHub Actions e in:
 .github/workflows/update-data.yml
 ```
 
-Parte automaticamente il giorno 1 di ogni mese alle 04:00 UTC e puo essere lanciato manualmente da `Actions -> Update public debt data -> Run workflow`.
+Parte automaticamente il giorno 16 di ogni mese alle 04:30 UTC e puo essere lanciato manualmente da `Actions -> Update public debt data -> Run workflow`.
 
 Il workflow:
 

@@ -42,6 +42,13 @@ BANKITALIA_OBJECT_TYPE = "PUBLICATION"
 BANKITALIA_PUBLICATION_CODE = "FPI"
 BANKITALIA_PUBLICATION_NAME = "Finanza pubblica: fabbisogno e debito"
 
+# Banca d'Italia BDS market-rate cubes.
+# RTIT0100 contains monthly gross issuance/allotment yields by security type
+# and maturity, including BOT 12 months and BTP 5/10/20 years.
+BANKITALIA_MARKET_RATE_CUBES = {
+    "RTIT0100": "Rendimenti dei titoli all'emissione",
+}
+
 
 # These table codes are the main public-finance tables used for debt analysis.
 # The script does not discard other tables. These labels are used to make the

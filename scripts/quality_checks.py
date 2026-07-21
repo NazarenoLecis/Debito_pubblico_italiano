@@ -26,6 +26,7 @@ CRITICAL_FILES = [
     PROCESSED_DIR / "final" / "interest_rates.csv",
     PROCESSED_DIR / "final" / "debt_interest_cost.csv",
     PROCESSED_DIR / "final" / "treasury_maturity_profile.csv",
+    PROCESSED_DIR / "final" / "security_issuance_yields.csv",
 ]
 
 WARNING_FILES = [
@@ -162,6 +163,7 @@ def build_quality_report():
     checks.append(check_required_columns(PROCESSED_DIR / "final" / "interest_rates.csv", ["rate_source", "rate_type"], "critical"))
     checks.append(check_required_columns(PROCESSED_DIR / "final" / "debt_interest_cost.csv", ["date", "cost_measure", "value"], "critical"))
     checks.append(check_required_columns(PROCESSED_DIR / "final" / "treasury_maturity_profile.csv", ["snapshot_date", "maturity_year", "amount_eur_revalued"], "critical"))
+    checks.append(check_required_columns(PROCESSED_DIR / "final" / "security_issuance_yields.csv", ["date", "series_key", "value_percent"], "critical"))
     checks.append(check_no_duplicate_dates(PROCESSED_DIR / "final" / "debt_total_monthly.csv", "date", "warning"))
 
     report = pd.DataFrame(checks)

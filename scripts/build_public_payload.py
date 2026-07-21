@@ -392,10 +392,17 @@ def build_debt_main_series(series):
     }
 
 
-def build_kpis(main_series, rates, debt_cost):
+def latest_security_yield(security_yields, series_key):
+    for series in security_yields.get("series", []):
+        if series.get("id") == series_key:
+            return series.get("latest")
+    return None
+
+
+def build_kpis(main_series, rates, debt_cost, security_yields):
     total = main_series.get("total_debt")
     debt_to_gdp = main_series.get("debt_to_gdp")
-    latest_rate = rates[-1] if rates else None
+    latest_rate = latest_security_yield(security_yields, "btp_10y")
     debt_cost_latest = debt_cost.get("measures", {}).get("nominal", {}).get("latest") if debt_cost else None
     kpis = []
     if total:
@@ -416,8 +423,8 @@ def build_kpis(main_series, rates, debt_cost):
         })
     if latest_rate:
         kpis.append({
-            "id": "long_term_yield",
-            "label": "Rendimento lungo termine",
+            "id": "btp_10y_yield",
+            "label": "BTP 10 anni",
             "value": latest_rate["value"],
             "unit": "%",
             "date": latest_rate["date"],
@@ -463,6 +470,50 @@ def build_interest_rates():
             "rate_type": "long_term_government_bond_yield",
         })
     return sorted(rows, key=lambda row: row["date"])
+
+
+def build_security_yields():
+    df = read_csv_if_exists(PROCESSED_DIR / "final" / "security_issuance_yields.csv")
+    if df.empty:
+        return {}
+
+    series = []
+    preferred_order = ["btp_10y", "bot_12m", "btp_5y", "btp_20y"]
+    grouped = {series_key: group for series_key, group in df.groupby("series_key", sort=False)}
+    ordered_keys = [key for key in preferred_order if key in grouped]
+    ordered_keys.extend([key for key in grouped if key not in preferred_order])
+    for series_key in ordered_keys:
+        group = grouped[series_key]
+        points = []
+        for _, row in group.iterrows():
+            date = row.get("date")
+            value = value_record(row.get("value_percent"))
+            if date and value is not None:
+                points.append([date, value])
+        points = sort_points(points)
+        latest = latest_dict(points)
+        first = group.iloc[0].to_dict()
+        series.append({
+            "id": series_key,
+            "series_id": first.get("series_id"),
+            "label": first.get("label"),
+            "official_label": first.get("official_label"),
+            "instrument": first.get("instrument"),
+            "maturity": first.get("maturity"),
+            "rate_kind": first.get("rate_kind"),
+            "unit": "%",
+            "latest": latest,
+            "points": points,
+        })
+
+    return {
+        "source": "Banca d'Italia",
+        "database": "Base Dati Statistica",
+        "dataset": "RTIT0100",
+        "label": "Rendimenti dei titoli all'emissione",
+        "description": "Tassi/rendimenti lordi mensili per BOT 12 mesi e BTP a 5, 10 e 20 anni.",
+        "series": series,
+    }
 
 
 def build_debt_cost():
@@ -590,6 +641,11 @@ def build_sources():
             "url": "https://a2a.bancaditalia.it/infostat/dataservices/export/IT/CSV/ALL/PUBLICATION/BANKITALIA/DIFF/FPI",
         },
         {
+            "name": "Banca d'Italia",
+            "dataset": "RTIT0100",
+            "url": "https://a2a.bancaditalia.it/infostat/dataservices/export/IT/CSV/ALL/CUBE/BANKITALIA/DIFF/RTIT0100",
+        },
+        {
             "name": "Eurostat",
             "dataset": "irt_lt_mcby_m",
             "url": "https://ec.europa.eu/eurostat/databrowser/view/irt_lt_mcby_m/default/table",
@@ -612,6 +668,7 @@ def build_public_payload():
     series, sections = load_bankitalia_sections(labels, official_by_column)
     main_series = build_debt_main_series(series)
     rates = build_interest_rates()
+    security_yields = build_security_yields()
     debt_cost = build_debt_cost()
     maturity_profile = build_maturity_profile()
     dates = [
@@ -628,27 +685,29 @@ def build_public_payload():
             "source_repo": "Debito_pubblico_italiano",
             "latest_bankitalia_date": max(dates) if dates else None,
             "latest_debt_cost_date": debt_cost_latest.get("date") if debt_cost_latest else None,
-            "description": "Payload pubblico sul debito pubblico italiano.",
+            "description": "Dati ufficiali elaborati sul debito pubblico italiano.",
         },
         "record_schema": {
             "series_points": ["date", "value_mln_eur", "value_bln_eur"],
             "debt_cost_nominal_points": ["date", "value_mln_eur", "value_bln_eur"],
             "debt_cost_percent_gdp_points": ["date", "value_percent_gdp"],
+            "security_yield_points": ["date", "value_percent"],
             "maturity_profile_yearly": ["year", "amount_eur_revalued", "amount_bln_eur_revalued", "securities"],
             "maturity_profile_quarterly": ["year", "quarter", "amount_eur_revalued", "amount_bln_eur_revalued", "securities"],
         },
-        "kpis": build_kpis(main_series, rates, debt_cost),
+        "kpis": build_kpis(main_series, rates, debt_cost, security_yields),
         "main_series": main_series,
         "debt_cost": debt_cost,
+        "security_yields": security_yields,
         "maturity_profile": maturity_profile,
         "sections": sections,
         "series": series,
         "interest_rates": rates,
         "sources": build_sources(),
         "notes": [
-            "I valori monetari Banca d'Italia sono in milioni di euro; il payload espone anche miliardi di euro.",
+            "I valori monetari Banca d'Italia sono in milioni di euro; nelle visualizzazioni sono convertiti anche in miliardi di euro.",
             "Le composizioni usano le serie ufficiali selezionate per evitare doppio conteggio tra aggregati e sotto-aggregati.",
-            "I tassi sono rendimenti mensili Eurostat sui titoli di Stato italiani a lungo termine.",
+            "I tassi selezionabili sono serie mensili Banca d'Italia sui rendimenti lordi all'emissione dei titoli di Stato.",
             "Il costo del debito e la voce Eurostat D41PAY, interessi passivi delle Amministrazioni pubbliche, in milioni di euro e in percentuale del PIL.",
             "Il profilo scadenze usa i file MEF Scadenze suddivise per anno e aggrega il circolante rivalutato per anno e trimestre di scadenza.",
         ],
