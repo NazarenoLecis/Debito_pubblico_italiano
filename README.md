@@ -12,6 +12,7 @@ Produrre output aggiornabili in CSV e JSON su:
 - fabbisogno delle Amministrazioni pubbliche;
 - composizione del debito per strumenti;
 - vita residua e scadenza originaria;
+- profilo scadenze dei titoli per anno e trimestre;
 - valuta e residenza dei creditori;
 - settori detentori del debito;
 - depositi e disponibilita liquide del Tesoro;
@@ -189,6 +190,8 @@ output/data/final/treasury_auctions.csv
 output/data/final/treasury_auctions.json
 output/data/final/treasury_redemptions.csv
 output/data/final/treasury_redemptions.json
+output/data/final/treasury_maturity_profile.csv
+output/data/final/treasury_maturity_profile.json
 output/data/final/interest_rates.csv
 output/data/final/interest_rates.json
 output/data/final/debt_interest_cost.csv

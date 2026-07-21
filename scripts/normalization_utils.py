@@ -17,6 +17,34 @@ from pandas.errors import EmptyDataError
 
 SOURCE_PREFIXES = ["source_", "downloaded_at_"]
 
+ITALIAN_MONTHS = {
+    "gen": 1,
+    "gennaio": 1,
+    "feb": 2,
+    "febbraio": 2,
+    "mar": 3,
+    "marzo": 3,
+    "apr": 4,
+    "aprile": 4,
+    "mag": 5,
+    "maggio": 5,
+    "giu": 6,
+    "giugno": 6,
+    "lug": 7,
+    "luglio": 7,
+    "ago": 8,
+    "agosto": 8,
+    "set": 9,
+    "sett": 9,
+    "settembre": 9,
+    "ott": 10,
+    "ottobre": 10,
+    "nov": 11,
+    "novembre": 11,
+    "dic": 12,
+    "dicembre": 12,
+}
+
 
 def clean_text(value):
     """Restituisce testo normalizzato per confronti e ricerche."""
@@ -148,6 +176,14 @@ def parse_date_like(value):
     if text == "":
         return ""
 
+    lowered = text.lower().replace(".", "-")
+    month_match = re.search(r"\b(\d{1,2})[-/\s]+([a-z]+)[-/\s]+(\d{4})\b", lowered)
+    if month_match:
+        day, month_text, year = month_match.groups()
+        month = ITALIAN_MONTHS.get(month_text.strip())
+        if month:
+            return f"{int(year):04d}-{month:02d}-{int(day):02d}"
+
     for dayfirst in [True, False]:
         parsed = pd.to_datetime(text, errors="coerce", dayfirst=dayfirst)
         if not pd.isna(parsed):
@@ -199,6 +235,7 @@ def extract_candidate_dates(text):
         r"\b\d{1,2}/\d{1,2}/\d{4}\b",
         r"\b\d{1,2}-\d{1,2}-\d{4}\b",
         r"\b\d{4}-\d{1,2}-\d{1,2}\b",
+        r"\b\d{1,2}[-/\s]+[A-Za-z]+[-/\s]+\d{4}\b",
     ]
     dates = []
     for pattern in patterns:

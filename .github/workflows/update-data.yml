@@ -2,8 +2,8 @@ name: Update public debt data
 
 on:
   schedule:
-    # Monthly update on the first day of the month at 04:00 UTC.
-    - cron: "0 4 1 * *"
+    # Monthly validation after the usual official-source publication window.
+    - cron: "30 4 16 * *"
   workflow_dispatch:
 
 permissions:

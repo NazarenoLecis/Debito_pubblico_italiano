@@ -151,8 +151,11 @@ def compact_label(value):
         "altre passivita": "Altre passivita",
         "altre passività": "Altre passivita",
         "debito lordo detenuto da ": "",
+        "Debito lordo detenuto da ": "",
         "debito lordo con vita residua ": "",
         "Debito lordo con vita residua ": "",
+        "altre istituzioni finanziarie monetarie": "Istituzioni finanziarie monetarie",
+        "Altre istituzioni finanziarie monetarie": "Istituzioni finanziarie monetarie",
     }
     for old, new in replacements.items():
         text = text.replace(old, new)
@@ -246,6 +249,24 @@ def latest_point(points):
     return ordered[-1] if ordered else None
 
 
+def point_at_date(record, date):
+    for point in record.get("points", []):
+        if point[0] == date:
+            return point
+    return None
+
+
+def latest_common_date(records):
+    date_sets = []
+    for record in records:
+        if record:
+            date_sets.append({point[0] for point in record.get("points", []) if point and point[0]})
+    if not date_sets:
+        return None
+    common = set.intersection(*date_sets)
+    return max(common) if common else None
+
+
 def build_series_records(dataset, table_code, df, labels, official_by_column):
     records = []
     dates = [row_date(row) for _, row in df.iterrows()]
@@ -303,9 +324,31 @@ def section_latest(records, codes):
 
 def latest_composition(records, dataset):
     codes = COMPOSITION_CODES.get(dataset, [])
-    rows = section_latest(records, codes)
+    selected_records = [find_record(records, code) for code in codes]
     total_record = find_record(records, TOTAL_DEBT_CODE)
-    total = total_record.get("latest_value_mln_eur") if total_record else None
+    common_records = [record for record in selected_records if record]
+    if total_record:
+        common_records.append(total_record)
+    composition_date = latest_common_date(common_records)
+
+    rows = []
+    for code, record in zip(codes, selected_records):
+        if record is None:
+            continue
+        point = point_at_date(record, composition_date) if composition_date else latest_point(record.get("points", []))
+        if point is None:
+            continue
+        rows.append({
+            "series_id": code,
+            "label": record["label"],
+            "official_label": record["official_label"],
+            "date": point[0],
+            "value_mln_eur": point[1],
+            "value_bln_eur": point[2],
+        })
+
+    total_point = point_at_date(total_record, composition_date) if total_record and composition_date else None
+    total = total_point[1] if total_point else None
     if not total:
         total = sum(row["value_mln_eur"] for row in rows)
     for row in rows:
@@ -474,6 +517,71 @@ def build_debt_cost():
     }
 
 
+def amount_record(value):
+    number = parse_italian_number(value)
+    if number is None:
+        return None
+    return round(float(number), 3)
+
+
+def build_maturity_profile():
+    df = read_csv_if_exists(PROCESSED_DIR / "final" / "treasury_maturity_profile.csv")
+    if df.empty or "snapshot_date" not in df.columns:
+        return {}
+
+    snapshots = [value for value in df["snapshot_date"].astype(str).tolist() if value]
+    if not snapshots:
+        return {}
+    snapshot_date = max(snapshots)
+    latest = df[df["snapshot_date"].astype(str) == snapshot_date].copy()
+    if latest.empty:
+        return {}
+
+    latest["amount_eur_revalued_num"] = latest["amount_eur_revalued"].map(amount_record)
+    latest["amount_eur_nominal_num"] = latest["amount_eur_nominal"].map(amount_record) if "amount_eur_nominal" in latest.columns else None
+    latest = latest[latest["amount_eur_revalued_num"].notna()]
+
+    yearly_rows = []
+    for year, group in latest.groupby("maturity_year"):
+        amount_revalued = float(group["amount_eur_revalued_num"].sum())
+        amount_nominal = float(group["amount_eur_nominal_num"].sum()) if "amount_eur_nominal_num" in group.columns else None
+        yearly_rows.append({
+            "year": str(year),
+            "amount_eur_revalued": round(amount_revalued, 3),
+            "amount_bln_eur_revalued": round(amount_revalued / 1_000_000_000, 3),
+            "amount_eur_nominal": round(amount_nominal, 3) if amount_nominal is not None else None,
+            "amount_bln_eur_nominal": round(amount_nominal / 1_000_000_000, 3) if amount_nominal is not None else None,
+            "securities": int(len(group)),
+        })
+
+    quarterly_rows = []
+    for (year, quarter), group in latest.groupby(["maturity_year", "maturity_quarter"]):
+        amount_revalued = float(group["amount_eur_revalued_num"].sum())
+        amount_nominal = float(group["amount_eur_nominal_num"].sum()) if "amount_eur_nominal_num" in group.columns else None
+        quarterly_rows.append({
+            "year": str(year),
+            "quarter": str(quarter),
+            "amount_eur_revalued": round(amount_revalued, 3),
+            "amount_bln_eur_revalued": round(amount_revalued / 1_000_000_000, 3),
+            "amount_eur_nominal": round(amount_nominal, 3) if amount_nominal is not None else None,
+            "amount_bln_eur_nominal": round(amount_nominal / 1_000_000_000, 3) if amount_nominal is not None else None,
+            "securities": int(len(group)),
+        })
+
+    yearly_rows = sorted(yearly_rows, key=lambda row: row["year"])
+    quarterly_rows = sorted(quarterly_rows, key=lambda row: (row["year"], row["quarter"]))
+    return {
+        "source": "MEF - Dipartimento del Tesoro",
+        "dataset": "Scadenze suddivise per anno",
+        "snapshot_date": snapshot_date,
+        "label": "Profilo scadenze",
+        "description": "Ammontare dei titoli in circolazione per anno e trimestre di scadenza.",
+        "value_basis": "Circolante Euro rivalutato",
+        "yearly": yearly_rows,
+        "quarterly": quarterly_rows,
+    }
+
+
 def build_sources():
     return [
         {
@@ -505,6 +613,7 @@ def build_public_payload():
     main_series = build_debt_main_series(series)
     rates = build_interest_rates()
     debt_cost = build_debt_cost()
+    maturity_profile = build_maturity_profile()
     dates = [
         record.get("latest_date")
         for record in series
@@ -525,10 +634,13 @@ def build_public_payload():
             "series_points": ["date", "value_mln_eur", "value_bln_eur"],
             "debt_cost_nominal_points": ["date", "value_mln_eur", "value_bln_eur"],
             "debt_cost_percent_gdp_points": ["date", "value_percent_gdp"],
+            "maturity_profile_yearly": ["year", "amount_eur_revalued", "amount_bln_eur_revalued", "securities"],
+            "maturity_profile_quarterly": ["year", "quarter", "amount_eur_revalued", "amount_bln_eur_revalued", "securities"],
         },
         "kpis": build_kpis(main_series, rates, debt_cost),
         "main_series": main_series,
         "debt_cost": debt_cost,
+        "maturity_profile": maturity_profile,
         "sections": sections,
         "series": series,
         "interest_rates": rates,
@@ -538,6 +650,7 @@ def build_public_payload():
             "Le composizioni usano le serie ufficiali selezionate per evitare doppio conteggio tra aggregati e sotto-aggregati.",
             "I tassi sono rendimenti mensili Eurostat sui titoli di Stato italiani a lungo termine.",
             "Il costo del debito e la voce Eurostat D41PAY, interessi passivi delle Amministrazioni pubbliche, in milioni di euro e in percentuale del PIL.",
+            "Il profilo scadenze usa i file MEF Scadenze suddivise per anno e aggrega il circolante rivalutato per anno e trimestre di scadenza.",
         ],
     }
     return payload
