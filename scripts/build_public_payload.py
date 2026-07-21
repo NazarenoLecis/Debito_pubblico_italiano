@@ -575,6 +575,34 @@ def amount_record(value):
     return round(float(number), 3)
 
 
+def residual_years(maturity_date, snapshot_date):
+    maturity = pd.to_datetime(maturity_date, errors="coerce")
+    snapshot = pd.to_datetime(snapshot_date, errors="coerce")
+    if pd.isna(maturity) or pd.isna(snapshot):
+        return None
+    days = (maturity - snapshot).days
+    return max(0, days / 365.25)
+
+
+def maturity_share(amount, total):
+    return round(amount / total * 100, 3) if total else None
+
+
+def weighted_average_residual_years(df, snapshot_date):
+    if df.empty or "maturity_date" not in df.columns:
+        return None
+    weighted = 0
+    total = 0
+    for _, row in df.iterrows():
+        amount = row.get("amount_eur_revalued_num")
+        years = residual_years(row.get("maturity_date"), snapshot_date)
+        if amount is None or pd.isna(amount) or years is None:
+            continue
+        weighted += float(amount) * years
+        total += float(amount)
+    return round(weighted / total, 3) if total else None
+
+
 def build_maturity_profile():
     df = read_csv_if_exists(PROCESSED_DIR / "final" / "treasury_maturity_profile.csv")
     if df.empty or "snapshot_date" not in df.columns:
@@ -591,6 +619,8 @@ def build_maturity_profile():
     latest["amount_eur_revalued_num"] = latest["amount_eur_revalued"].map(amount_record)
     latest["amount_eur_nominal_num"] = latest["amount_eur_nominal"].map(amount_record) if "amount_eur_nominal" in latest.columns else None
     latest = latest[latest["amount_eur_revalued_num"].notna()]
+    total_revalued = float(latest["amount_eur_revalued_num"].sum())
+    weighted_years = weighted_average_residual_years(latest, snapshot_date)
 
     yearly_rows = []
     for year, group in latest.groupby("maturity_year"):
@@ -602,7 +632,7 @@ def build_maturity_profile():
             "amount_bln_eur_revalued": round(amount_revalued / 1_000_000_000, 3),
             "amount_eur_nominal": round(amount_nominal, 3) if amount_nominal is not None else None,
             "amount_bln_eur_nominal": round(amount_nominal / 1_000_000_000, 3) if amount_nominal is not None else None,
-            "securities": int(len(group)),
+            "share_percent": maturity_share(amount_revalued, total_revalued),
         })
 
     quarterly_rows = []
@@ -616,7 +646,7 @@ def build_maturity_profile():
             "amount_bln_eur_revalued": round(amount_revalued / 1_000_000_000, 3),
             "amount_eur_nominal": round(amount_nominal, 3) if amount_nominal is not None else None,
             "amount_bln_eur_nominal": round(amount_nominal / 1_000_000_000, 3) if amount_nominal is not None else None,
-            "securities": int(len(group)),
+            "share_percent": maturity_share(amount_revalued, total_revalued),
         })
 
     yearly_rows = sorted(yearly_rows, key=lambda row: row["year"])
@@ -628,6 +658,10 @@ def build_maturity_profile():
         "label": "Profilo scadenze",
         "description": "Ammontare dei titoli in circolazione per anno e trimestre di scadenza.",
         "value_basis": "Circolante Euro rivalutato",
+        "total_amount_eur_revalued": round(total_revalued, 3),
+        "total_amount_bln_eur_revalued": round(total_revalued / 1_000_000_000, 3),
+        "weighted_average_residual_years": weighted_years,
+        "weighted_average_method": "Media degli anni alla scadenza ponderata per circolante euro rivalutato, calcolata sulle singole date di scadenza dei titoli nel file MEF.",
         "yearly": yearly_rows,
         "quarterly": quarterly_rows,
     }
@@ -692,8 +726,8 @@ def build_public_payload():
             "debt_cost_nominal_points": ["date", "value_mln_eur", "value_bln_eur"],
             "debt_cost_percent_gdp_points": ["date", "value_percent_gdp"],
             "security_yield_points": ["date", "value_percent"],
-            "maturity_profile_yearly": ["year", "amount_eur_revalued", "amount_bln_eur_revalued", "securities"],
-            "maturity_profile_quarterly": ["year", "quarter", "amount_eur_revalued", "amount_bln_eur_revalued", "securities"],
+            "maturity_profile_yearly": ["year", "amount_eur_revalued", "amount_bln_eur_revalued", "share_percent"],
+            "maturity_profile_quarterly": ["year", "quarter", "amount_eur_revalued", "amount_bln_eur_revalued", "share_percent"],
         },
         "kpis": build_kpis(main_series, rates, debt_cost, security_yields),
         "main_series": main_series,
