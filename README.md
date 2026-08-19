@@ -268,7 +268,9 @@ Il workflow GitHub Actions e in:
 .github/workflows/update-data.yml
 ```
 
-Parte automaticamente il giorno 16 di ogni mese alle 04:30 UTC e puo essere lanciato manualmente da `Actions -> Update public debt data -> Run workflow`.
+La pubblicazione automatica su R2 viene eseguita dal repository privato `nazarenolecis-data-pipeline` il giorno 16 di ogni mese alle 05:30 UTC.
+
+In questo repository il workflow puo essere lanciato manualmente da `Actions -> Validate public debt data -> Run workflow`. Serve per validare il repo sorgente senza duplicare il refresh mensile gestito dalla pipeline.
 
 Il workflow:
 
@@ -277,9 +279,9 @@ Il workflow:
 - esegue `python scripts/build_all_datasets.py`;
 - carica come artifact il report qualita;
 - carica come artifact il payload pubblico;
-- lascia la pubblicazione mensile su R2 al repository `nazarenolecis-data-pipeline`.
+- se richiesto con `verify_public_endpoint=true`, verifica che `https://data.nazarenolecis.com/debito-pubblico/data.json` sia fresco e allineato alle date fonte del build locale.
 
-Il workflow usa `concurrency` per evitare sovrapposizioni tra aggiornamenti mensili e run manuali.
+In questo modo le credenziali R2 restano fuori dal repository pubblico e l'automazione mensile resta concentrata nel repo pipeline. Il workflow usa `concurrency` per evitare sovrapposizioni tra run manuali.
 
 ## Configurazione
 

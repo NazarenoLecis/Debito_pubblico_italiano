@@ -1,10 +1,21 @@
-name: Update public debt data
+name: Validate public debt data
 
 on:
-  schedule:
-    # Monthly validation after the usual official-source publication window.
-    - cron: "30 4 16 * *"
   workflow_dispatch:
+    inputs:
+      verify_public_endpoint:
+        description: Compare the public R2 endpoint with the local build
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      public_endpoint_max_age_hours:
+        description: Maximum accepted age for the public endpoint
+        required: false
+        default: "168"
+        type: string
 
 permissions:
   contents: read
@@ -53,7 +64,8 @@ jobs:
             output/data/public/debito-pubblico.json
           if-no-files-found: ignore
 
-      - name: Explain publication route
-        run: |
-          echo "This repository validates and builds the data artifacts."
-          echo "The monthly R2 publication is orchestrated by nazarenolecis-data-pipeline."
+      - name: Verify public endpoint
+        if: ${{ inputs.verify_public_endpoint == 'true' }}
+        env:
+          PUBLIC_ENDPOINT_MAX_AGE_HOURS: ${{ inputs.public_endpoint_max_age_hours }}
+        run: python scripts/verify_public_endpoint.py
